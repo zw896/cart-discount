@@ -49,8 +49,6 @@ class Cart {
 
     public function total()
     {
-    	// $this->printCart();
-
     	$totalPrice = 0;
     	foreach($this->cart as $sku => $detail)
         {
@@ -64,11 +62,46 @@ class Cart {
         $rules = $this->getPricingRules($sku);
         $offerDetail = $this->pricingRules[$sku];
 
-        // echo "offerDetail " . $offerDetail . "\n";
-
+        // buy 10 or more copies of The Mythical Man-Month, and receive them at the discounted price of $21.99
         if ($rules == 'lowerPrice' && $detail['quantity'] >= 10) {
-        	// echo "enter lower price \n";
         	return $this->lowerPriceTotal($detail['quantity'], $offerDetail);
+        }
+        // buy 1 Game of Thrones: Season 1, will get 1 The Fresh Prince of Bel-Air free
+        elseif ($rules == 'buyOneGetOneFree') {
+        	$price = $this->noDiscountPriceTotal($detail);
+        	$offerSku = $offerDetail['offer'];
+        	$freeQuantity = $detail['quantity'];
+
+        	// if there are 9325336028278 in the cart
+        	if (isset($this->cart[$offerSku])) {
+        		// case 1: customer bought more Game of Thrones: Season 1 than The Fresh Prince of Bel-Air
+    			if ($freeQuantity > $this->cart[$offerSku]['quantity']) {
+    				$diff = $freeQuantity - $this->cart[$offerSku]['quantity'];
+    				$price -= $this->cart[$offerSku]['quantity'] * $this->cart[$offerSku]['price'];
+    				for ($i = 0; $i < $diff; $i++) {
+	    				$this->addProduct('9325336028278');
+	    			}
+    			}
+    			// case 2: customer bought Game of Thrones: Season 1 less than The Fresh Prince of Bel-Air
+    			else {
+    				$price -= $freeQuantity * $this->cart[$offerSku]['price'];
+    			}
+    		}
+    		// case 3: if there are no 9325336028278 in the cart, just add
+    		else {
+    			for ($i = 0; $i < $detail['quantity']; $i++) {
+    				$this->addProduct('9325336028278');
+    			}
+    		}
+
+    		echo "Cart after added free The Fresh Prince of Bel-Air \n";
+        	$this->printCart();
+
+        	return $price;
+        }
+        // 3 for the price of 2 deal on Coders at Work. (Buy 3 get 1 free);
+        elseif ($rules == 'buyThreeGetOneFree' && $detail['quantity'] >= 3) {
+        	return $this->buyThreeGetOneFreeTotal($sku, $detail);
         }
         else
         	return $this->noDiscountPriceTotal($detail);
@@ -86,6 +119,16 @@ class Cart {
         return $quantity * $lowerPrice;
     }
 
+    // 3 for the price of 2 deal on Coders at Work. (Buy 3 get 1 free);
+    private function buyThreeGetOneFreeTotal($sku, $detail)
+    {
+        // echo floor($detail['quantity'] / 3);
+        $freeQuantity = floor($detail['quantity'] / 3);
+        $totalQuantity = $detail['quantity'];
+        $price = $detail['price'];
+        return $price * ($totalQuantity - $freeQuantity);
+    }
+
     private function noDiscountPriceTotal($detail)
     {
         return $detail['price'] * $detail['quantity'];
@@ -95,10 +138,8 @@ class Cart {
     {
         foreach ($this->pricingRules as $index=>$detail)
         {
-        	if ($index == $sku) {
+        	if ($index == $sku)
         		return $detail['discount'];
-        		// echo "index: ".$index." ".$detail['discount'];
-        	}
         }
         return -1;
     }    
