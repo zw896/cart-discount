@@ -26,7 +26,7 @@ class Cart {
         // add to cart
         $this->cart[$sku] = array(
         	'sku'		=> $sku,
-        	'price'		=> $this->productList[$productID], 
+        	'price'		=> $this->productList[$sku], 
         	'quantity'	=> $quantity + $number, 
         	'totalPrice'=> 0
         );
@@ -36,7 +36,7 @@ class Cart {
     {
     	$result = array();
         echo "Products in cart: ";
-        foreach ($this->cart as $sku => $detail)
+        foreach($this->cart as $sku => $detail)
         {
             if($detail['quantity'] > 1) 
             	$result[] = $sku . " x " . $detail['quantity'];
@@ -46,5 +46,61 @@ class Cart {
         echo implode(', ', $result);
         echo "\n";
     }
+
+    public function total()
+    {
+    	// $this->printCart();
+
+    	$totalPrice = 0;
+    	foreach($this->cart as $sku => $detail)
+        {
+            $totalPrice += $this->afterDiscount($sku, $detail);
+        }
+        echo "Expected total: " . $totalPrice . "\n\n";
+    }
+
+    private function afterDiscount($sku, $detail)
+    {
+        $rules = $this->getPricingRules($sku);
+        $offerDetail = $this->pricingRules[$sku];
+
+        // echo "offerDetail " . $offerDetail . "\n";
+
+        if ($rules == 'lowerPrice' && $detail['quantity'] >= 10) {
+        	// echo "enter lower price \n";
+        	return $this->lowerPriceTotal($detail['quantity'], $offerDetail);
+        }
+        else
+        	return $this->noDiscountPriceTotal($detail);
+        
+    }
+
+    /**
+     * @param $detail: [price], [quantity]
+     * @param $rules
+     * @return float || int
+     */
+    private function lowerPriceTotal($quantity, $sku)
+    {
+        $lowerPrice = $sku['offer'];
+        return $quantity * $lowerPrice;
+    }
+
+    private function noDiscountPriceTotal($detail)
+    {
+        return $detail['price'] * $detail['quantity'];
+    }
+
+	private function getPricingRules($sku)
+    {
+        foreach ($this->pricingRules as $index=>$detail)
+        {
+        	if ($index == $sku) {
+        		return $detail['discount'];
+        		// echo "index: ".$index." ".$detail['discount'];
+        	}
+        }
+        return -1;
+    }    
 }
 ?>
